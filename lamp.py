@@ -10,9 +10,9 @@ name:LAMP 辅助安装脚本
 
 author:Zhang
 
-last_edit:2019-4-15
+last_edit:2019-4-16
 
-version：1.0.1
+version：1.0.2
 
 '''
 
@@ -95,16 +95,13 @@ class Apache:
         cmd = 'systemctl status httpd'
         os.system(cmd)
 
-    # 这个函数在 Apache 和 Php 类里面都要用到，该放在哪里最为优雅呢？
-    # This function get from https://blog.csdn.net/weixin_40539892/article/details/79103254
-
     def auto_start(self):
 
         cmd = 'systemctl enable httpd'
         os.system(cmd)
 
     def one_key(self):
-        '一键安装：包含 安装，启动服务，设置开机启动，开启端口，生成测试网页'
+        '一键安装：包含 安装，启动服务，设置开机启动，开启端口'
         self.install()
         self.open_port()
         self.auto_start()
@@ -218,26 +215,18 @@ class MySQL:
 
     def close_password_policy_plugin(self):
         '关闭密码策略插件，以便方便设置密码。'
-        print '''提示：请确保你有第二种登陆方式!比如使用秘钥加密码登陆；
-                       或者秘钥登陆也行。总之，如果没有，请不要执行这
-                       个操作。它会使你的密码登陆失效！如果你执行
-                       这个操作以后并且关闭了当前窗口，然而却没有第二种
-                       登陆方式，你将无法登陆你的服务器！！！切记！
-        '''
-        flag = raw_input('真的要执行关闭密码登陆操作？【y/n】')
-        if flag == 'y':
-            filepath = '/etc/my.cnf'
-            with open(filepath, 'a+')as fl:
-                fl.seek(0)
-                file_data = fl.read()
-                mo = re.findall(r'(?<!# )validate_password=off', file_data)
-                if len(mo) == 0:
-                    print '密码管理策略插件关闭中...'
-                    fl.write('validate_password=off' + '\n')
-                    print '密码管理策略插件已成功关闭。'
-                else:
-                    print '管理密码插件本已关闭，无需进行操作。'
-            self.restart()
+        filepath = '/etc/my.cnf'
+        with open(filepath, 'a+')as fl:
+            fl.seek(0)
+            file_data = fl.read()
+            mo = re.findall(r'(?<!# )validate_password=off', file_data)
+            if len(mo) == 0:
+                print '密码管理策略插件关闭中...'
+                fl.write('validate_password=off' + '\n')
+                print '密码管理策略插件已成功关闭。'
+            else:
+                print '管理密码插件本已关闭，无需进行操作。'
+        self.restart()
 
     def get_default_password(self):
 
@@ -275,6 +264,8 @@ class MySQL:
         self.close_password_policy_plugin()
         default_password = self.get_default_password()
         self.change_password('root', default_password, new_password)
+        cmd = 'rm -rf mysql57-community-release-el7-11.noarch.rpm'
+        os.system(cmd)
 
     def display(self):
 
@@ -470,6 +461,95 @@ class PHP:
             else:
                 print '请输入正确的序号'
 
+class PHPMyAdmin:
+
+    def __init__(self):
+        pass
+
+    def install(self):
+
+        cmd = 'yum install phpmyadmin -y'
+        os.system(cmd)
+
+    def remove(self):
+        'remove_phpmyadmin'
+
+        cmd = 'yum remove phpmyadmin'
+        os.system(cmd)
+
+    def attr_config(self):
+
+        path = '/etc/httpd/conf.d/phpMyAdmin.conf'
+        if os.path.exists(path):
+            cmd = 'vi {}'.format(path)
+            os.system(cmd)
+        else:
+            print '没有找到 phpmyadmin 的配置文件。'
+
+    def __auto_config(self):
+        
+        """
+        将 Require ip 127.0.0.1 和 Require ip ::1 注释掉，
+        并在 </RequireAny> 前面一行加上 Require all granted
+        """
+        path = '/etc/httpd/conf.d/phpMyAdmin.conf'
+        if not os.path.exists(path):
+            print '请先安装 phpMyAdmin'
+        else:
+            with open(path)as fl:
+                data = fl.readlines()
+            with open(path,'w')as fl:
+                for line in data:
+                    if 'Require ip' in line:
+                        index = data.index(line)
+                        replace_str = line.replace('Require ip','# Require ip')
+                        fl.write(replace_str) 
+                    elif r'</RequireAny>' in line:
+                        fl.write(r'      Require all granted' + '\n')
+                        fl.write(line + '\n')
+                    else:
+                        fl.write(line)
+
+    def one_key(self):
+        '一键安装：包含安装与参数配置'
+        self.install()
+        self.__auto_config()
+        cmd = 'systemctl restart httpd'
+        os.system(cmd)
+
+    def display(self):
+
+        while True:
+            string = '''
+            ***************************
+
+                   phpMyAdmin 配置
+
+            ***************************
+
+                1.安装 phpMyAdmin；
+                2.手动修改 phpMyAdmin 参数配置；
+                3.卸载 phpMyAdmin；
+                9.一键安装配置 phpMyAdmin；
+                0.返回上一页；
+            '''
+            print string
+            flag = raw_input('请选择：')
+            if flag == '1':
+                self.install()
+            elif flag == '2':
+                self.attr_config()
+            elif flag == '3':
+                flag = raw_input('是否确定要卸载 phpMyAdmin[y/n]？')
+                if flag == 'y':
+                    self.remove()
+            elif flag == '9':
+                self.one_key()
+            elif flag == '0' or flag == '':
+                break
+            else:
+                print '请输入正确的序号'
+
 class PORT():
 
     def list_port(self):
@@ -533,6 +613,7 @@ class LAMP:
         self.apache = Apache()
         self.mysql = MySQL()
         self.php = PHP()
+        self.phpmyadmin = PHPMyAdmin()
         self.port = PORT()
 
     def get_host_ip(self):
@@ -554,12 +635,13 @@ class LAMP:
 
             Apache 测试路径：http://{}
             php 测试路径：http://{}/info.php
+            phpMyadmin 访问路径：http://{}/phpmyadmin
             ssh 设置路径：/etc/ssh/sshd_config
             Apache 默认服务器目录：/var/www/html/
             Apache 默认参数配置目录：/etc/httpd/conf/httpd.conf
 
         -----------------------------------------------------------
-        '''.format(ip,ip)
+        '''.format(ip,ip,ip)
         raw_input('请按 Enter 键继续...')
 
     def close_passwd_connect(self):
@@ -616,6 +698,9 @@ class LAMP:
         self.apache.one_key()
         self.php.one_key()
         self.apache_php_config()
+        self.phpmyadmin.one_key()
+        self.show_messages()
+        raw_input('请按Enter继续...')
 
     def display(self):
 
@@ -628,11 +713,13 @@ class LAMP:
 
                 **************************
 
-                    1. 一键搭建 LAMP 环境(Apache,MySQL5.7,PHP7.1)
+                    1. 一键搭建 LAMP 环境
+                       (Apache,MySQL5.7,PHP7.1,phpMyAdmin)
                     2. Apache 配置
                     3. MySQL  配置
                     4. PHP    配置
-                    5. 端口   设置
+                    5. phpmyadmin 配置
+                    6. 端口   设置
                     7. Apache 挂载 php
                     8. 显示部分重要信息
                     9. 关闭使用密码登录
@@ -651,9 +738,9 @@ class LAMP:
             elif flag == '4':
                 self.php.display()
             elif flag == '5':
-                self.port.display()
+                self.phpmyadmin.display()
             elif flag == '6':
-                pass
+                self.port.display()
             elif flag == '7':
                 self.apache_php_config()
             elif flag == '8':
@@ -672,6 +759,6 @@ if __name__ == '__main__':
         lamp = LAMP()
         lamp.display()
     except KeyboardInterrupt:
-        print '\n您按了终端程序按钮，现在程序退出。'
+        print '\n您按了终止程序按钮，现在程序退出。'
     except Exception,e:
         print e
