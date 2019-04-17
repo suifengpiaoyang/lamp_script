@@ -700,7 +700,6 @@ class LAMP:
         self.apache_php_config()
         self.phpmyadmin.one_key()
         self.show_messages()
-        raw_input('请按Enter继续...')
 
     def display(self):
 
