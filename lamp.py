@@ -555,22 +555,18 @@ class PORT():
     def list_port(self):
 
         cmd = 'firewall-cmd --zone=public --list-ports'
-        result = os.popen(cmd).read()
-        if len(result.strip()) == 0:
-            print '当前防火墙没有开启tcp端口'
-        else:
-            print result
+        os.system(cmd)
 
     def open_port(self, port):
 
-        cmd = 'firewall-cmd --add-port={}/tcp --permanent'.format(port)
+        cmd = 'firewall-cmd --zone=public --add-port={}/tcp --permanent'.format(port)
         os.system(cmd)
         cmd = 'firewall-cmd --reload'
         os.system(cmd)
 
     def close_port(self, port):
 
-        cmd = 'firewall-cmd --remove-port={}/tcp --permanent'.format(port)
+        cmd = 'firewall-cmd --zone=public --remove-port={}/tcp --permanent'.format(port)
         os.system(cmd)
         cmd = 'firewall-cmd --reload'
         os.system(cmd)
@@ -593,10 +589,10 @@ class PORT():
             print string
             flag = raw_input('请选择：')
             if flag == '1':
-                port = raw_input('请输入要开启的端口号：')
+                port = raw_input('请输入要开启的端口号(批量请输入a-b这种格式)：')
                 self.open_port(port)
             elif flag == '2':
-                port = raw_input('请输入要关闭的端口号：')
+                port = raw_input('请输入要关闭的端口号(批量请输入a-b这种格式)：')
                 self.close_port(port)
             elif flag == '3':
                 self.list_port()
@@ -604,7 +600,6 @@ class PORT():
                 break
             else:
                 print '请输入正确的序号'
-
 
 class LAMP:
 
