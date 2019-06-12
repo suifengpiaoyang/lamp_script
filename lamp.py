@@ -13,6 +13,7 @@ author:Zhang
 last_edit:2019-4-16
 
 version：1.0.2
+version:1.0.3 增加端口号的 udp 设置，以便方便游戏加速
 
 '''
 
@@ -73,7 +74,7 @@ class Apache:
               firewall-cmd --remove-port=443/tcp --permanent
               firewall-cmd --reload
               '''
-        os.popen(cmd)        
+        os.popen(cmd)
 
     def attr_config(self):
 
@@ -561,12 +562,16 @@ class PORT():
 
         cmd = 'firewall-cmd --zone=public --add-port={}/tcp --permanent'.format(port)
         os.system(cmd)
+        cmd = 'firewall-cmd --zone=public --add-port={}/udp --permanent'.format(port)
+        os.system(cmd)
         cmd = 'firewall-cmd --reload'
         os.system(cmd)
 
     def close_port(self, port):
 
         cmd = 'firewall-cmd --zone=public --remove-port={}/tcp --permanent'.format(port)
+        os.system(cmd)
+        cmd = 'firewall-cmd --zone=public --remove-port={}/udp --permanent'.format(port)
         os.system(cmd)
         cmd = 'firewall-cmd --reload'
         os.system(cmd)
@@ -581,8 +586,8 @@ class PORT():
 
             **********************
 
-                1.开启防火墙tcp端口；
-                2.关闭防火墙tcp端口；
+                1.开启防火墙端口；
+                2.关闭防火墙端口；
                 3.列出当前已开启端口；
                 0.返回上一页；
             '''
